@@ -1,0 +1,87 @@
+//ParcelContract.java
+
+package CourierSCM;
+
+import org.hyperledger.fabric.contract.Context;
+import org.hyperledger.fabric.contract.ContractInterface;
+import org.hyperledger.fabric.contract.annotation.Contract;
+import org.hyperledger.fabric.contract.annotation.Default;
+import org.hyperledger.fabric.contract.annotation.Info;
+import org.hyperledger.fabric.contract.annotation.Transaction;
+import org.hyperledger.fabric.shim.ChaincodeException;
+import org.hyperledger.fabric.shim.ChaincodeStub;
+import com.owlike.genson.Genson;
+
+@Contract(
+    name = "CourierSCM",
+    info = @Info(
+        title = "Courier SCM Contract",
+        description = "Smart contract for managing parcel tracking in a courier supply chain",
+        version = "0.0.1"
+    )
+)
+@Default
+public final class ParcelContract implements ContractInterface {
+
+    private final Genson genson = new Genson();
+
+    private enum ParcelErrors {
+        PARCEL_NOT_FOUND,
+        PARCEL_ALREADY_EXISTS
+    }
+
+    // ✅ Add sample data to the ledger
+    @Transaction()
+    public void initLedger(final Context ctx) {
+        ChaincodeStub stub = ctx.getStub();
+        Parcel sample = new Parcel("P001", "Alice", "Bob", "Dispatched", "Warehouse A");
+        String parcelState = genson.serialize(sample);
+        stub.putStringState("P001", parcelState);
+    }
+
+    // ✅ Add new parcel
+    @Transaction()
+    public Parcel addParcel(final Context ctx, final String id, final String sender,
+                            final String receiver, final String status, final String location) {
+        ChaincodeStub stub = ctx.getStub();
+        if (!stub.getStringState(id).isEmpty()) {
+            throw new ChaincodeException("Parcel " + id + " already exists",
+                ParcelErrors.PARCEL_ALREADY_EXISTS.toString());
+        }
+
+        Parcel parcel = new Parcel(id, sender, receiver, status, location);
+        String parcelState = genson.serialize(parcel);
+        stub.putStringState(id, parcelState);
+        return parcel;
+    }
+
+    // ✅ Query parcel by ID
+    @Transaction()
+    public Parcel queryParcelById(final Context ctx, final String id) {
+        ChaincodeStub stub = ctx.getStub();
+        String parcelState = stub.getStringState(id);
+        if (parcelState.isEmpty()) {
+            throw new ChaincodeException("Parcel " + id + " does not exist",
+                ParcelErrors.PARCEL_NOT_FOUND.toString());
+        }
+        return genson.deserialize(parcelState, Parcel.class);
+    }
+
+    // ✅ Update parcel status
+    @Transaction()
+    public Parcel updateParcelStatus(final Context ctx, final String id,
+                                     final String newStatus, final String newLocation) {
+        ChaincodeStub stub = ctx.getStub();
+        String parcelState = stub.getStringState(id);
+        if (parcelState.isEmpty()) {
+            throw new ChaincodeException("Parcel " + id + " does not exist",
+                ParcelErrors.PARCEL_NOT_FOUND.toString());
+        }
+
+        Parcel existing = genson.deserialize(parcelState, Parcel.class);
+        Parcel updated = new Parcel(existing.getId(), existing.getSender(),
+                                    existing.getReceiver(), newStatus, newLocation);
+        stub.putStringState(id, genson.serialize(updated));
+        return updated;
+    }
+}

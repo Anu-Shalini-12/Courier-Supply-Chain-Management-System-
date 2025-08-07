@@ -1,0 +1,85 @@
+//Parcel.java
+package CourierSCM;
+
+import com.owlike.genson.annotation.JsonProperty;
+import org.hyperledger.fabric.contract.annotation.DataType;
+import org.hyperledger.fabric.contract.annotation.Property;
+
+import java.util.Objects;
+
+@DataType()
+public final class Parcel {
+
+    @Property()
+    private final String id;
+
+    @Property()
+    private final String sender;
+
+    @Property()
+    private final String receiver;
+
+    @Property()
+    private final String status;
+
+    @Property()
+    private final String location;
+
+    public String getId() {
+        return id;
+    }
+
+    public String getSender() {
+        return sender;
+    }
+
+    public String getReceiver() {
+        return receiver;
+    }
+
+    public String getStatus() {
+        return status;
+    }
+
+    public String getLocation() {
+        return location;
+    }
+
+    public Parcel(
+        @JsonProperty("id") final String id,
+        @JsonProperty("sender") final String sender,
+        @JsonProperty("receiver") final String receiver,
+        @JsonProperty("status") final String status,
+        @JsonProperty("location") final String location
+    ) {
+        this.id = id;
+        this.sender = sender;
+        this.receiver = receiver;
+        this.status = status;
+        this.location = location;
+    }
+
+    @Override
+    public boolean equals(final Object obj) {
+        if (this == obj) return true;
+        if ((obj == null) || (getClass() != obj.getClass())) return false;
+
+        Parcel other = (Parcel) obj;
+        return Objects.deepEquals(
+            new String[] { id, sender, receiver, status, location },
+            new String[] { other.id, other.sender, other.receiver, other.status, other.location }
+        );
+    }
+
+    @Override
+    public int hashCode() {
+        return Objects.hash(id, sender, receiver, status, location);
+    }
+
+    @Override
+    public String toString() {
+        return this.getClass().getSimpleName() + "@" + Integer.toHexString(hashCode()) +
+               " [id=" + id + ", sender=" + sender + ", receiver=" + receiver +
+               ", status=" + status + ", location=" + location + "]";
+    }
+}

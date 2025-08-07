@@ -1,0 +1,54 @@
+//ClientApp.java
+
+package fabricjavaclient1;
+import java.nio.file.Path;
+import java.nio.file.Paths;
+import org.hyperledger.fabric.gateway.Contract;
+import org.hyperledger.fabric.gateway.Gateway;
+import org.hyperledger.fabric.gateway.Network;
+import org.hyperledger.fabric.gateway.Wallet;
+import org.hyperledger.fabric.gateway.Wallets;
+
+public class ClientApp {
+
+    public static void main(String[] args) throws Exception {
+        // Set the property for localhost service discovery
+        System.setProperty("org.hyperledger.fabric.sdk.service_discovery.as_localhost", "true");
+
+        // Load the wallet for managing identities
+        Path walletPath = Paths.get("wallet");
+        Wallet wallet = Wallets.newFileSystemWallet(walletPath);
+
+        // Load the network configuration file
+        Path networkConfigPath = Paths.get("..", "..", "fabric-samples", "test-network", "organizations", "peerOrganizations", "org1.example.com", "connection-org1.yaml");
+
+        // Build the gateway and connect to the network
+        Gateway.Builder builder = Gateway.createBuilder();
+        builder.identity(wallet, "appUser").networkConfig(networkConfigPath).discovery(true);
+
+        // Connect to the gateway
+        try (Gateway gateway = builder.connect()) {
+
+            // Get the network and contract
+            Network network = gateway.getNetwork("mychannel");
+            Contract contract = network.getContract("CourierSCM");
+
+            // Invoke the initLedger function (initializes the ledger with sample data)
+            invokeChaincodeFunction(contract, "initLedger");
+
+            // Add a new parcel (example: P003, from John to Emma)
+            invokeChaincodeFunction(contract, "addParcel", "P003", "Anu", "Emma", "In Transit", "Center B");
+
+
+            // Query parcel by ID (example: P003)
+            byte[] result = contract.evaluateTransaction("queryParcelById", "P003");
+            System.out.println("Parcel details: " + new String(result));
+
+            // Update the status of the parcel (example: Delivered at Destination Hub)
+            invokeChaincodeFunction(contract, "updateParcelStatus", "P003", "Delivered", "Destination Hub");
+
+            // Optionally, you can query again to confirm the status update
+            result = contract.evaluateTransaction("queryParcelById", "P003");
+            System.out.println("Updated parcel details: " + new String(result));
+        }
+    }
